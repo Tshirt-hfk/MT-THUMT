@@ -215,7 +215,7 @@ def beam_search(models, features, params):
         states)
 
     # Initial beam search state
-    init_seqs = torch.full([batch_size, beam_size, 1], bos_id, device=device)
+    init_seqs = torch.full([batch_size, beam_size, 1], bos_id, dtype=torch.long, device=device)
     init_seqs = init_seqs.long()
     init_log_probs = init_seqs.new_tensor(
         [[0.] + [min_val] * (beam_size - 1)], dtype=torch.float32)
