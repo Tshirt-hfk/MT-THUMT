@@ -108,7 +108,7 @@ class MultiHeadAttentionBase(Module):
 
 class MultiHeadAttention(MultiHeadAttentionBase):
 
-    def __init__(self, hidden_size, num_heads, dropout=0.0,
+    def __init__(self, hidden_size, num_heads, dropout=0.0, max_len=256,
                  name="multihead_attention"):
         super(MultiHeadAttention, self).__init__(name=name)
 
@@ -125,6 +125,8 @@ class MultiHeadAttention(MultiHeadAttentionBase):
                                       name="v_transform")
             self.o_transform = Affine(hidden_size, hidden_size,
                                       name="o_transform")
+            self.context_position = nn.Parameter(torch.Tensor(max_len, self.hidden_size // self.num_heads))
+            self.add_name(self.context_position, "context_position")
 
         self.reset_parameters()
 
@@ -169,6 +171,8 @@ class MultiHeadAttention(MultiHeadAttentionBase):
                                               training=self.training)
 
         x = torch.matmul(weights, vh)
+        pos = torch.matmul(weights, self.context_position[:weights.shape[3]])
+        x = x + pos - torch.mean(pos, dim=1, keepdim=True)
 
         # combine heads
         output = self.o_transform(self.combine_heads(x))
@@ -185,6 +189,7 @@ class MultiHeadAttention(MultiHeadAttentionBase):
             nn.init.xavier_uniform_(self.k_transform.weight, 2 ** -0.5)
             nn.init.xavier_uniform_(self.v_transform.weight, 2 ** -0.5)
             nn.init.xavier_uniform_(self.o_transform.weight)
+            nn.init.xavier_uniform_(self.context_position)
             nn.init.constant_(self.q_transform.bias, 0.0)
             nn.init.constant_(self.k_transform.bias, 0.0)
             nn.init.constant_(self.v_transform.bias, 0.0)
